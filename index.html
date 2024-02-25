@@ -13,6 +13,9 @@
     }
 </style>
 
+<div id= "level"></div>
+<div id= "puntuacion"></div>
+
 <canvas></canvas>
 
 <img hidden id="sprite" src="./Assets/sprite.png" alt="Sprite Arkanoid"/>
@@ -20,6 +23,7 @@
 
 
 <script>
+    
     const canvas = document.querySelector('canvas')
     const ctx = canvas.getContext('2d')
 
@@ -30,7 +34,12 @@
     canvas.height = 400
 
     //Variables se inicializan aquí
+
+    //Variables globales del juego
+    let level = 1
+    let puntuacion = 0
     
+
     //VARIABLES DE LA PELOTA
     const ballRadius = 3;
 
@@ -53,6 +62,42 @@
 
     let rightPressed = false
     let leftPressed = false
+
+    //VARIABLES DE LOS LADRILLOS
+    const brickRowCount = 6;
+    const brickColumnCount = 13;
+    const brickWidth = 32;
+    const brickHeigth = 16;
+    const brickPadding = 0;
+    const brickOffsetTop = 80;
+    const brickOffsetLeft = 16;
+    const bricks = [];
+
+    const BRICK_STATUS = {
+        ACTIVE:1,
+        DESTROYED: 0
+    }
+
+    document.getElementById('level').innerHTML = "Nivel: " + level;
+
+    for(let c = 0; c < brickColumnCount; c++){
+        bricks[c] = [] //inicializamos un array vacío
+        for (let r  = 0; r < brickRowCount; r++){
+            //Calculamos la posición del ladrillo en la pantalla
+            const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft
+            const brickY = r * (brickHeigth + brickPadding) + brickOffsetTop
+            //Asignamos un color aleatorio a cada ladrillo
+            const random = Math.floor(Math.random()*8) //esto nos saca uno de los 7 ladrillos ya que el Math.floor redondea hacia abajo por lo que nos sacara un valor entre el 0 y el 7
+            //Guardamos la información de cada ladrillo
+            bricks[c][r] = {
+                x: brickX, 
+                y: brickY, 
+                status: BRICK_STATUS.ACTIVE, 
+                color: random
+            }
+
+        }
+    }
 
     function drawBall() {
         ctx.beginPath() //iniciar el trazado
@@ -77,11 +122,64 @@
     }
 
     function drawBricks(){
+        for(let c = 0; c < brickColumnCount; c++){
+            for (let r = 0; r < brickRowCount; r++){
+                const currentBrick = bricks[c][r]
+                if(currentBrick.status === BRICK_STATUS.DESTROYED)
+                continue;
+                
+                /*ctx.fillStyle = 'yellow'
+                ctx.rect(
+                    currentBrick.x,
+                    currentBrick.y,
+                    brickWidth,
+                    brickHeigth
+                )
+                //Esto es para el borde
+                ctx.strokeStyle = '#000'
+                ctx.stroke()
+                //Esto pinta los bloques
+                ctx.fill()*/
 
+                const clipX = currentBrick.color * 32; //En este caso se multiplica por 32 ya que es el ancho del ladrillo en el Asset
+                
+
+                ctx.drawImage(
+                    $bricks,
+                    clipX,
+                    0,
+                    31, //tamaño de X en px en el Asset
+                    14, //tamaño de Y en px en el Asset
+                    currentBrick.x,
+                    currentBrick.y,
+                    brickWidth,
+                    brickHeigth
+                )
+            }
+        }
     }
 
     function collisionDetection(){
+        
+        for(let c = 0; c < brickColumnCount; c++){
+            for (let r = 0; r < brickRowCount; r++){
+                const currentBrick = bricks[c][r]
+                if(currentBrick.status === BRICK_STATUS.DESTROYED)continue;
 
+                const isBallSameXAsBrick = x > currentBrick.x && x < currentBrick.x + brickWidth;
+                const isBallSameYAsbrick = y > currentBrick.y && y < currentBrick.y + brickHeigth;
+                if(isBallSameXAsBrick && isBallSameYAsbrick){
+                    dy = -dy
+                    currentBrick.status = BRICK_STATUS.DESTROYED
+                    puntuacion += puntuacionBloques(r, brickRowCount, 0)
+                    //puntuacion += -(r - brickRowCount)
+                }
+            }
+        }
+    }
+
+    function puntuacionBloques(brickPosition , numberRows, difficulty){
+        return -(brickPosition - numberRows - difficulty)
     }
 
     function ballMovement(){
@@ -150,6 +248,18 @@
         }
     }
 
+    function allBricksDestroyed(){
+        let allDestroyed = true
+        for(let c = 0; c < brickColumnCount; c++){
+            for (let r = 0; r < brickRowCount; r++){
+                const currentBrick = bricks[c][r]
+                if(currentBrick.status === BRICK_STATUS.ACTIVE)allDestroyed = false;
+            }
+        }
+        level += 1
+        return allDestroyed
+    }
+
     //la funcion draw lo que hace es una programación para llamarse a si misma y es lo que se encargará de realizar las acciones que necesiten de movimiento
     function draw() {
         //funciones a ejecutar cada vez se realiza aquí
@@ -166,6 +276,17 @@
         collisionDetection()
         ballMovement()
         paddleMovement()
+
+
+        //Actualiza el valor de nuestra puntuación
+        document.getElementById('puntuacion').innerHTML = "Puntuación: " + puntuacion;
+
+        
+        //Detectar si todos los bloques se han destruido
+        if (allBricksDestroyed()){
+            //Actualiza el valor del nivel en el que nos encontramos
+            document.getElementById('level').innerHTML = "Nivel: " + level;
+        }
 
         //este metodo que se llama se ejecuta cada vez que se hace un refresco de un frame en la pantalla 60Hz = 60 refrescos/segundo 
         window.requestAnimationFrame(draw)
