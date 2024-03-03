@@ -13,6 +13,9 @@
     }
 </style>
 
+<div id= "level"></div>
+<div id= "puntuacion"></div>
+
 <canvas></canvas>
 
 <img hidden id="sprite" src="./Assets/sprite.png" alt="Sprite Arkanoid"/>
@@ -20,6 +23,7 @@
 
 
 <script>
+    
     const canvas = document.querySelector('canvas')
     const ctx = canvas.getContext('2d')
 
@@ -30,7 +34,12 @@
     canvas.height = 400
 
     //Variables se inicializan aquí
+
+    //Variables globales del juego
+    let level = 1
+    let puntuacion = 0
     
+
     //VARIABLES DE LA PELOTA
     const ballRadius = 3;
 
@@ -68,6 +77,8 @@
         ACTIVE:1,
         DESTROYED: 0
     }
+
+    document.getElementById('level').innerHTML = "Nivel: " + level;
 
     for(let c = 0; c < brickColumnCount; c++){
         bricks[c] = [] //inicializamos un array vacío
@@ -149,6 +160,7 @@
     }
 
     function collisionDetection(){
+        
         for(let c = 0; c < brickColumnCount; c++){
             for (let r = 0; r < brickRowCount; r++){
                 const currentBrick = bricks[c][r]
@@ -159,9 +171,15 @@
                 if(isBallSameXAsBrick && isBallSameYAsbrick){
                     dy = -dy
                     currentBrick.status = BRICK_STATUS.DESTROYED
+                    puntuacion += puntuacionBloques(r, brickRowCount, 0)
+                    //puntuacion += -(r - brickRowCount)
                 }
             }
         }
+    }
+
+    function puntuacionBloques(brickPosition , numberRows, difficulty){
+        return -(brickPosition - numberRows - difficulty)
     }
 
     function ballMovement(){
@@ -230,6 +248,18 @@
         }
     }
 
+    function allBricksDestroyed(){
+        let allDestroyed = true
+        for(let c = 0; c < brickColumnCount; c++){
+            for (let r = 0; r < brickRowCount; r++){
+                const currentBrick = bricks[c][r]
+                if(currentBrick.status === BRICK_STATUS.ACTIVE)allDestroyed = false;
+            }
+        }
+        level += 1
+        return allDestroyed
+    }
+
     //la funcion draw lo que hace es una programación para llamarse a si misma y es lo que se encargará de realizar las acciones que necesiten de movimiento
     function draw() {
         //funciones a ejecutar cada vez se realiza aquí
@@ -246,6 +276,17 @@
         collisionDetection()
         ballMovement()
         paddleMovement()
+
+
+        //Actualiza el valor de nuestra puntuación
+        document.getElementById('puntuacion').innerHTML = "Puntuación: " + puntuacion;
+
+        
+        //Detectar si todos los bloques se han destruido
+        if (allBricksDestroyed()){
+            //Actualiza el valor del nivel en el que nos encontramos
+            document.getElementById('level').innerHTML = "Nivel: " + level;
+        }
 
         //este metodo que se llama se ejecuta cada vez que se hace un refresco de un frame en la pantalla 60Hz = 60 refrescos/segundo 
         window.requestAnimationFrame(draw)
